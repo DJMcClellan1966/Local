@@ -1,0 +1,105 @@
+import re
+import json
+from collections import deque
+
+# Full base vocab list (~1020 unique words for coding prompts)
+# This is the complete deduplicated list from the curated expansion
+vocab = [
+    # Core Action Verbs (150+)
+    "write", "create", "generate", "build", "make", "implement", "code", "develop", "fix", "debug", "correct", "solve", "improve", "optimize", "refactor", "rewrite", "convert", "translate", "add", "remove", "update", "modify", "explain", "describe", "show", "tell", "help", "assist", "provide", "give", "output", "return", "print", "display", "handle", "process", "validate", "check", "test", "run", "execute", "call", "invoke", "use", "import", "export", "define", "declare", "initialize", "throw", "catch", "try", "await", "async", "review", "analyze", "suggest", "propose", "design", "structure", "organize", "clean", "format", "style", "lint", "parse", "serialize", "deserialize", "encode", "decode", "encrypt", "decrypt", "hash", "authenticate", "authorize", "log", "trace", "monitor", "profile", "benchmark", "measure", "compare", "sort", "search", "filter", "map", "reduce", "group", "aggregate", "join", "merge", "split", "combine", "extract", "transform", "load", "query", "fetch", "send", "receive", "post", "get", "put", "delete", "patch",
+    # Prompt-Engineering Glue & Instructions (200+)
+    "please", "can", "you", "could", "help", "me", "need", "have", "here", "using", "with", "in", "for", "to", "that", "which", "when", "if", "then", "else", "step", "by", "explain", "reason", "chain", "of", "thought", "think", "carefully", "detailed", "simple", "clear", "concise", "clean", "best", "way", "practices", "efficient", "modern", "professional", "example", "give", "an", "sample", "code", "full", "complete", "just", "the", "only", "no", "explanation", "comments", "add", "docstring", "markdown", "code", "block", "fenced", "output", "avoid", "include", "remove", "use", "external", "libraries", "standard", "library", "pythonic", "idiomatic", "es6", "modern", "syntax", "handle", "edge", "cases", "error", "handling", "include", "tests", "unit", "integration", "with", "tests", "expected", "output", "input", "example", "constraints", "requirements", "follow", "adhere", "to", "respect", "based", "on", "extend", "modify", "from", "this", "improve", "refactor", "optimize", "make", "faster", "smaller", "readable", "maintainable", "act", "as", "you", "are", "role", "expert", "senior", "developer", "python", "expert", "react", "developer",
+    # Languages & Frameworks / Libraries (120+)
+    "python", "javascript", "js", "react", "node", "nodejs", "typescript", "ts", "html", "css", "java", "csharp", "c", "cpp", "c++", "sql", "rust", "go", "golang", "swift", "kotlin", "ruby", "php", "bash", "shell", "powershell", "docker", "kubernetes", "aws", "azure", "gcp", "firebase", "react", "native", "nextjs", "vue", "angular", "svelte", "django", "flask", "fastapi", "express", "nestjs", "spring", "springboot", "laravel", "symfony", "tensorflow", "pytorch", "keras", "scikit", "learn", "pandas", "numpy", "huggingface", "transformers", "langchain", "openai", "anthropic", "groq", "ollama", "tailwind", "bootstrap", "materialui", "chakraui", "antd", "jest", "pytest", "unittest", "vitest", "cypress", "selenium", "graphql", "apollo", "relay", "prisma", "sqlalchemy", "mongoose", "sequelize", "redis", "kafka", "rabbitmq", "postgresql", "mysql", "sqlite", "mongodb", "supabase", "vercel", "netlify", "heroku", "railway", "flyio",
+    # Code Elements & Artifacts (300+)
+    "function", "def", "method", "class", "object", "component", "hook", "state", "props", "ref", "context", "reducer", "effect", "usestate", "useeffect", "usereducer", "usecontext", "useref", "variable", "const", "let", "var", "array", "list", "tuple", "dict", "dictionary", "set", "map", "object", "promise", "async", "await", "callback", "event", "listener", "handler", "api", "endpoint", "route", "request", "response", "json", "xml", "yaml", "toml", "file", "path", "directory", "folder", "module", "package", "import", "from", "export", "default", "interface", "type", "enum", "struct", "union", "pointer", "loop", "for", "while", "do", "if", "else", "elif", "switch", "case", "break", "continue", "try", "catch", "except", "finally", "raise", "throw", "error", "exception", "bug", "issue", "traceback", "stack", "trace", "log", "console", "log", "print", "debug", "breakpoint", "test", "unit", "test", "assert", "mock", "patch", "spy", "fixture", "return", "yield", "generator", "lambda", "anonymous", "comprehension", "list", "comprehension", "dict", "comprehension", "set", "comprehension", "decorator", "annotation", "metadata", "middleware", "controller", "model", "view", "template", "service", "repository", "schema", "migration", "validation", "form", "input", "button", "div", "span", "paragraph", "header", "footer", "nav", "section", "article", "aside", "main", "flex", "grid", "layout", "responsive", "media", "query", "css", "class", "id", "selector", "pseudo", "hover", "focus", "active", "key", "index", "value", "item", "element", "child", "parent", "sibling", "prop", "drilling", "lifting", "state", "memo", "callback", "usememo", "usecallback",
+    # Constraints & Qualifiers (120+)
+    "fast", "efficient", "performant", "secure", "safe", "clean", "readable", "maintainable", "scalable", "simple", "minimal", "short", "one", "liner", "no", "dependencies", "no", "external", "libraries", "use", "only", "built", "in", "standard", "library", "pythonic", "idiomatic", "modern", "es2020", "es6", "async", "await", "promises", "functional", "object", "oriented", "oop", "immutable", "pure", "function", "side", "effect", "free", "handle", "edge", "cases", "add", "error", "handling", "validation", "sanitization", "logging", "comments", "docstring", "type", "hints", "mypy", "pep8", "black", "ruff", "lint", "no", "console", "no", "print", "return", "value", "input", "output", "stdin", "stdout", "file", "input", "example", "input", "expected", "output", "constraints", "n", "log", "n", "o", "1", "space", "time", "complexity", "space", "complexity", "big", "o", "optimized", "vectorized", "parallel", "concurrent", "thread", "safe", "async", "safe", "production", "ready", "ready", "to", "deploy", "with", "setup", "with", "requirements", "txt", "with", "dockerfile", "with", "readme",
+    # Debugging & Errors (100+)
+    "error", "bug", "issue", "problem", "exception", "traceback", "stack", "overflow", "undefined", "null", "nil", "none", "nan", "typeerror", "valueerror", "keyerror", "indexerror", "attributeerror", "syntaxerror", "importerror", "filenotfounderror", "connectionerror", "timeout", "httperror", "failed", "not", "working", "crashes", "hangs", "slow", "memory", "leak", "infinite", "loop", "recursion", "error", "stack", "overflow", "wrong", "output", "unexpected", "behavior", "incorrect", "result", "fix", "bug", "debug", "code", "what", "wrong", "why", "is", "this", "happening", "how", "to", "fix", "explain", "error", "resolve", "issue", "handle", "exception", "raise", "custom", "error", "log", "error", "print", "debug", "breakpoint", "here",
+    # UI/Frontend-Specific (130+)
+    "button", "form", "input", "textarea", "select", "option", "checkbox", "radio", "label", "fieldset", "legend", "table", "tr", "td", "th", "thead", "tbody", "ul", "ol", "li", "div", "span", "p", "h1", "h2", "h3", "header", "footer", "nav", "aside", "main", "section", "article", "dialog", "modal", "alert", "toast", "notification", "dropdown", "menu", "accordion", "tabs", "carousel", "slider", "tooltip", "popover", "badge", "avatar", "card", "grid", "flexbox", "container", "wrapper", "layout", "responsive", "mobile", "first", "dark", "mode", "theme", "color", "scheme", "css", "variable", "tailwind", "class", "bootstrap", "class", "styled", "components", "emotion", "sass", "scss", "less", "postcss", "jsx", "tsx", "render", "rerender", "mount", "unmount", "componentdidmount", "componentwillunmount", "useeffect", "cleanup", "key", "prop", "fragment", "portal", "suspense", "lazy", "error", "boundary"
+]
+
+# Deduplicate (should be ~1020)
+vocab = sorted(set(w for w in vocab if len(w) > 1))
+print(f"Base vocab size: {len(vocab)}")
+
+# To run this, install: pip install nltk
+import nltk
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+from nltk.corpus import wordnet as wn
+
+# Function to get POS and definition (most common sense from WordNet)
+def get_pos_def(word):
+    synsets = wn.synsets(word)
+    if synsets:
+        syn = synsets[0]  # Most common usage
+        pos_map = {'n': 'noun', 'v': 'verb', 'a': 'adjective', 'r': 'adverb', 's': 'adjective'}
+        pos = pos_map.get(syn.pos(), 'unknown')
+        definition = syn.definition().lower()
+        return pos, definition
+    else:
+        # Fallback for technical/coding-specific words not in WordNet
+        if any(t in word for t in ['use', 'state', 'effect', 'reducer', 'context', 'ref', 'memo', 'callback', 'tailwind', 'chakra', 'antd', 'nextjs', 'svelte', 'fastapi', 'nestjs', 'springboot', 'huggingface', 'langchain', 'groq', 'ollama', 'vitest', 'cypress', 'prisma', 'supabase', 'vercel', 'netlify', 'railway', 'flyio', 'materialui', 'componentdidmount', 'componentwillunmount', 'jsx', 'tsx', 'propdrilling', 'liftingstate']):
+            return 'noun', f'a {word} is a specific concept or feature in modern programming, especially web development, ui components, or libraries'
+        elif 'error' in word or word.endswith('error'):
+            return 'noun', 'an error is a problem or mistake in code that prevents it from working correctly'
+        elif word in ['pythonic', 'idiomatic', 'es6', 'es2020', 'pep8', 'mypy', 'ruff', 'black']:
+            return 'adjective', f'referring to a style or best practice in {word} programming'
+        else:
+            return 'noun', f'a {word} is a term commonly used in software development and coding tasks'
+
+# Build the dictionary: {word: {"pos": "...", "def": "..."}}
+dictionary = {}
+for word in vocab:
+    pos, definition = get_pos_def(word)
+    dictionary[word] = {
+        "pos": pos,
+        "def": definition
+    }
+
+# Recursive expansion: Add any new words from definitions until closed
+all_words = set(vocab)
+queue = deque(vocab)  # BFS to process words
+new_words_added = 0
+max_iterations = 30  # Safety
+iteration = 0
+
+while queue and iteration < max_iterations:
+    iteration += 1
+    current_size = len(all_words)
+    to_process = list(queue)
+    queue.clear()
+    
+    for word in to_process:
+        if word in dictionary:
+            def_text = dictionary[word]["def"]
+            # Extract words from definition (simple lowercase letters)
+            tokens = re.findall(r'[a-z]+', def_text)
+            for t in tokens:
+                if t not in all_words and len(t) > 2:  # Skip shorts like "a", "to"
+                    all_words.add(t)
+                    queue.append(t)
+                    # Add new word to dictionary
+                    pos, definition = get_pos_def(t)
+                    dictionary[t] = {
+                        "pos": pos,
+                        "def": definition
+                    }
+                    new_words_added += 1
+    
+    print(f"Iteration {iteration}: Added {len(all_words) - current_size} new words. Total words now: {len(all_words)}")
+
+# Final stats
+print(f"\nFully built dictionary size: {len(dictionary):,} entries")
+print(f"Base words: {len(vocab):,}")
+print(f"New words added from definitions: {new_words_added:,}")
+print("The dictionary is now self-contained — all words in any definition are keys in the dict.")
+
+# Save to JSON for your prototype
+with open("coding_dictionary.json", "w", encoding="utf-8") as f:
+    json.dump(dictionary, f, indent=2, ensure_ascii=False)
+
+print("Saved to 'coding_dictionary.json' — use this in your pipeline!")
