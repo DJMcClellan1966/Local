@@ -1,0 +1,306 @@
+# Common user inputs when building code and apps (one per line)
+# Add your own; lines starting with # are ignored. Used to build dictionary from real usage.
+Create a login form with email validation
+Build a simple Python API endpoint for user data
+Add a submit button to the form
+Make a React component that fetches data from an API
+Write a function that validates the input
+Create a todo list app with add and delete
+Build a REST API with FastAPI
+Add error handling to the request
+Create a form with name email and password fields
+Make a dropdown menu with three options
+Build a login page with React and Tailwind
+Write a Python script that reads a JSON file
+Create a button that calls an API
+Add loading state while fetching data
+Build a simple Express server
+Create a modal dialog for confirmation
+Write a hook that fetches user data
+Add validation to the form before submit
+Create a table that displays the results
+Build a search bar with filter
+Make a responsive layout with flexbox
+Create an endpoint that returns JSON
+Add a logout button to the header
+Write a test for the login function
+Build a form with validation and error messages
+Create a list component with map
+Add authentication to the API
+Make a sidebar navigation menu
+Create a card component with title and description
+Build a Python Flask app with one route
+Add state management with useState
+Create a simple CRUD API
+Write a function that sorts the array
+Build a contact form with name email message
+Add dark mode toggle to the app
+Create a pagination component
+Make an input field with placeholder
+Build a React app with routing
+Add a delete button with confirm dialog
+Create a chart component with mock data
+Write a utility to format the date
+Build a navbar with links
+Add unit tests for the service
+Create a dropdown for selecting category
+Make a form that submits to API
+Build an API that accepts POST request
+Add loading spinner to the button
+Create a grid layout for the cards
+Write a middleware for authentication
+Build a simple Node server
+Add error boundary to catch errors
+Create a filter for the list
+Make a button that toggles visibility
+Build a Python API with SQLite
+Add toast notification on success
+Create a header with logo and menu
+Write a reducer for the cart state
+Build a form with checkbox and radio
+Add debounce to the search input
+Create a modal with form inside
+Make a fetch request with async await
+Build a React component with props
+Add CSS module for the component
+Create an endpoint for user login
+Write a helper to validate email
+Build a list with add remove edit
+Add environment variables for API url
+Create a simple HTML form
+Make a component that uses context
+Build a FastAPI endpoint with schema
+Add a back button to the detail page
+Create a slider for the price range
+Write a test that mocks the API
+Build a dashboard with three cards
+Add form reset on success
+Create a select with options from API
+Make a responsive navbar
+Build a Python script that writes to file
+Add retry logic to the fetch
+Create a badge for the status
+Write a custom hook for form state
+Build an API with get and post
+Add validation message below input
+Create a footer with links
+Make a table with sortable columns
+Build a React app with Vite
+Add cookie for session
+Create a multi step form
+Write a function that parses the response
+Build a button group for filters
+Add skeleton loader while loading
+Create a date picker component
+Make an API call on button click
+Build a simple Express route
+Add redirect after login
+Create a list with key and index
+Write a utility for local storage
+Build a form with select and input
+Add error state to the component
+Create a card with image and text
+Make a POST request with JSON body
+Build a Python class with methods
+Add hover effect to the button
+Create a sidebar with icons
+Write a test for the validation
+Build a search with autocomplete
+Add disabled state to submit button
+Create a grid of product cards
+Make a context provider for auth
+Build a REST endpoint with validation
+Add success message after save
+Create a tab component with two tabs
+Write a function that filters the list
+Build a React form with controlled inputs
+Add loading indicator
+Create a modal that closes on overlay click
+Make a dropdown with search
+Build an API that returns array of users
+Add type checking with TypeScript
+Create a simple calculator component
+Write a script that runs the tests
+Build a page with form and table
+Add default value to the input
+Create a button that opens modal
+Make a fetch with error handling
+Build a Python decorator for auth
+Add responsive breakpoints
+Create a header component
+Write a reducer with switch case
+Build a form with file upload
+Add placeholder text
+Create a list that loads more on scroll
+Make a POST with form data
+Build a Node API with MongoDB
+Add theme context
+Create a checkbox list
+Write a helper to format currency
+Build a React app with state
+Add validation rules to the form
+Create a badge component
+Make an async function that awaits
+Build a simple HTML page
+Add click handler to the row
+Create a select with multiple
+Write a test for the API call
+Build a dashboard layout
+Add style to the component
+Create a form with reset button
+Make a component that receives callback
+Build a FastAPI app with CORS
+Add logout to the menu
+Create a card grid with gap
+Write a function that maps the data
+Build a table with pagination
+Add loading to the page
+Create a modal form
+Make a request with headers
+Build a Python API with Pydantic
+Add focus style to input
+Create a navigation with active link
+Write a custom hook for fetch
+Build a form with dropdown
+Add error message display
+Create a simple button component
+Make a list component with items
+Build an Express API with router
+Add token to the request
+Create a layout with header and main
+Write a utility to parse query string
+Build a React component with hooks
+Add required field validation
+Create a toast for errors
+Make a GET request and set state
+Build a Python function with type hints
+Add margin and padding
+Create a menu with submenu
+Write a test for the component
+Build a page with search and list
+Add disabled attribute
+Create a form with textarea
+Make a context with useState
+Build a REST API with error response
+Add icon to the button
+Create a simple list view
+Write a function that returns promise
+Build a form with validation schema
+Add key to the list item
+Create a card with button
+Make an API with query params
+Build a Node server with middleware
+Add success callback
+Create a dropdown with options
+Write a hook that returns data and loading
+Build a Python script with argparse
+Add style prop to the component
+Create a table with header row
+Make a form with onSubmit
+Build a React app with useEffect
+Add catch block to the promise
+Create a modal with title
+Write a validator for the field
+Build an endpoint with status code
+Add class name to the div
+Create a navigation component
+Make a state update in the callback
+Build a simple API with JSON response
+Add min and max to the input
+Create a list with conditional render
+Write a test with mock
+Build a form with initial values
+Add ref to the input
+Create a button with variant
+Make a fetch in useEffect
+Build a Python module with exports
+Add padding to the container
+Create a header with title
+Write a reducer for the state
+Build a page with form
+Add onChange to the select
+Create a card component
+Make a request with auth header
+Build an Express app with JSON
+Add loading state
+Create a simple input component
+Write a function that handles the event
+Build a React form with useRef
+Add type to the button
+Create a grid with columns
+Make a POST with JSON body
+Build a Python API with dependency
+Add flex to the layout
+Create a sidebar component
+Write a test for the reducer
+Build a list with filter
+Add value to the input
+Create a form with select input
+Make a component with children
+Build a FastAPI route with response
+Add onClick to the element
+Create a table component
+Write a utility for the API url
+Build a Node app with async
+Add state to the component
+Create a modal component
+Make a fetch and update state
+Build a Python class with init
+Add display flex
+Create a nav with items
+Write a hook for the form
+Build a form with button
+Add error to the state
+Create a simple div
+Make a GET request
+Build an API with middleware
+Add className to the element
+Create a list of items
+Write a validator function
+Build a React app with components
+Add handler to the button
+Create a form with inputs
+Make a state for the form
+Build a REST API with get post
+Add margin to the card
+Create a button component
+Write a test for the handler
+Build a page with table
+Add placeholder to the input
+Create a dropdown component
+Make an async request
+Build a Python package
+Add border to the box
+Create a layout component
+Write a function for the API
+Build a form with validation
+Add index to the map
+Create a card with link
+Make a component with props
+Build an Express endpoint
+Add loading to the button
+Create a simple form
+Write a reducer with action
+Build a React component
+Add type attribute
+Create a table with data
+Make a fetch request
+Build a Python API
+Add style object
+Create a nav bar
+Write a custom hook
+Build a form with state
+Add key prop
+Create a modal
+Make a POST request
+Build a Node server
+Add error handling
+Create a list
+Write a test
+Build an API
+Add validation
+Create a button
+Make a component
+Build a form
+Add state
+Create a page

@@ -2,9 +2,10 @@ import json
 import ollama
 import re
 import subprocess
+import sys
 import tempfile
 import os
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 # ================= CONFIG =================
 MODEL = "phi3:mini"           # Change to "gemma3:1b" for faster CPU, or "qwen3:4b" for better code
@@ -65,6 +66,15 @@ def retrieve(query: str, top_k: int = 10) -> str:
     )[:top_k]
     return "\n".join(f"- {w} ({e['pos']}): {e['def']}" for _, w, e in matches)
 
+# ================= Helpers =================
+def extract_code(text: str) -> str:
+    """Extract code from markdown fenced blocks (```...```) or return text as-is."""
+    text = text.strip()
+    match = re.search(r"```(?:js|javascript|ts|tsx|jsx)?\s*\n(.*?)```", text, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return text
+
 # ================= Tools =================
 def run_code(code: str, suffix: str = '.js') -> Tuple[bool, str]:
     with tempfile.NamedTemporaryFile(mode='w', suffix=suffix, delete=False) as f:
@@ -81,6 +91,8 @@ def run_code(code: str, suffix: str = '.js') -> Tuple[bool, str]:
         return False, str(e)
 
 def run_tests() -> Tuple[bool, str]:
+    if not os.path.exists(TEST_FILE):
+        return True, "No test file (create tests/test_app.py for auto-testing)"
     try:
         result = subprocess.run(['pytest', TEST_FILE, '-q'], capture_output=True, text=True, timeout=15)
         return result.returncode == 0, result.stdout + "\n" + result.stderr
@@ -98,7 +110,7 @@ Output ONLY a number 0-100."""
     try:
         resp = ollama.generate(model="gemma3:1b", prompt=prompt)  # use tiny model as judge
         return float(resp['response'].strip())
-    except:
+    except Exception:
         return 0.0
 
 # ================= Agent Loop =================
@@ -106,6 +118,45 @@ def run_agent(request: str, template_key: str = "react_form", max_attempts: int 
     print(f"Starting agent for: {request}")
     context = retrieve(request)
     template = APP_TEMPLATES.get(template_key, "No template found.")
+    return _run_agent_loop(request, context, template, max_attempts)
+
+
+def run_agent_with_grammar(
+    request: str,
+    template_key: str = "react_form",
+    max_attempts: int = 3,
+    dictionaries: Optional[dict] = None,
+) -> str:
+    """
+    Same as run_agent but augments context with grammar rules, usual patterns (POS/sentence),
+    and word info (pos, def, grammar) from grammar_dictionary so the LLM sees and learns patterns.
+    """
+    try:
+        from llm_dictionary_context import load_all_dictionaries, build_llm_context, retrieve_with_grammar
+    except ImportError:
+        return run_agent(request, template_key, max_attempts)
+    if dictionaries is None:
+        dictionaries = load_all_dictionaries()
+    grammar_ctx = build_llm_context(
+        request,
+        dictionaries=dictionaries,
+        include_grammar_rules=True,
+        include_usual_patterns=True,
+        include_word_info=True,
+        max_words=25,
+    )
+    context = retrieve_with_grammar(
+        request,
+        dictionaries.get("coding_dictionary", {}),
+        dictionaries.get("grammar_dictionary", {}),
+        top_k=15,
+    )
+    combined = f"Grammar rules and usual patterns:\n{grammar_ctx}\n\nDictionary entries (word, pos, grammar):\n{context}"
+    template = APP_TEMPLATES.get(template_key, "No template found.")
+    return _run_agent_loop(request, combined, template, max_attempts)
+
+
+def _run_agent_loop(request: str, context: str, template: str, max_attempts: int) -> str:
 
     current_code = ""
     for attempt in range(1, max_attempts + 1):
@@ -132,27 +183,32 @@ If previous had errors, fix them now."""
 
         response = ollama.generate(model=MODEL, prompt=prompt, options={"temperature": 0.25})
         current_code = response['response'].strip()
+        code_to_run = extract_code(current_code)
 
         print(f"Attempt {attempt}: generated code length {len(current_code)}")
 
         # Quick verification
-        ok, output = run_code(current_code)
+        ok, output = run_code(code_to_run)
         tests_ok, test_msg = run_tests()
-        score = judge_output(current_code, request)
+        score = judge_output(code_to_run, request)
 
         print(f"  Exec: {'OK' if ok else 'FAIL'} | Tests: {'PASS' if tests_ok else 'FAIL'} | Judge: {score:.0f}/100")
         print(f"  Output snippet: {output[:200]}...")
 
         if ok and tests_ok and score >= 85:
             print("Success!")
-            return current_code
+            return code_to_run
 
     print("Max attempts reached. Returning best effort.")
-    return current_code
+    return extract_code(current_code)
 
 # ================= CLI Loop =================
 if __name__ == "__main__":
-    print("DictAgent ready. Enter requests below (type 'quit' to exit)\n")
+    use_grammar = "--grammar" in sys.argv or "-g" in sys.argv
+    if use_grammar:
+        print("DictAgent (grammar-aware: pos, def, grammar rules + patterns). Type 'quit' to exit.\n")
+    else:
+        print("DictAgent ready. Enter requests below (type 'quit' to exit). Use --grammar for grammar-aware mode.\n")
     while True:
         user_input = input("Request: ").strip()
         if user_input.lower() in ['quit', 'exit', 'q']:
@@ -160,7 +216,7 @@ if __name__ == "__main__":
         if not user_input:
             continue
 
-        result = run_agent(user_input)
+        result = run_agent_with_grammar(user_input) if use_grammar else run_agent(user_input)
         print("\n" + "="*60)
         print("Generated Code:\n")
         print(result)

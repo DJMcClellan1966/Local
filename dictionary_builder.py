@@ -1,22 +1,39 @@
 """
 Dictionary Builder for Coding-Focused LLM/Agent
 ------------------------------------------------
-- Starts with a curated list of ~1020 coding-related words/phrases
+- Starts with vocabulary from common user inputs (common_coding_vocab.json from
+  common_prompts.txt) if present, else a curated list of ~1020 coding-related words
 - Uses NLTK WordNet to assign POS (noun/verb/etc.) and a primary definition
 - Recursively expands by extracting words from definitions and adding them
-- Continues until no new words are found (fully closed/self-contained dictionary)
 - Saves result as coding_dictionary.json
 
+To build from prompts: python vocab_from_prompts.py  then run this script.
 Run once to generate the file, then use it in dict_agent.py
 """
 
 import json
+import os
 import re
 from collections import deque
 
-# ================== 1. Curated Starter Vocab (~1020 items) ==================
-# This is the deduplicated, grouped list from our earlier curation
-starter_vocab = [
+# ================== 1. Starter Vocab: from common prompts or curated list ==================
+COMMON_VOCAB_FILE = "common_coding_vocab.json"
+
+def _load_starter_vocab() -> list[str]:
+    """Use vocab from common user inputs (common_coding_vocab.json) if present, else built-in list."""
+    if os.path.exists(COMMON_VOCAB_FILE):
+        try:
+            with open(COMMON_VOCAB_FILE, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            if isinstance(loaded, list) and loaded:
+                return [str(w).lower() for w in loaded]
+        except Exception:
+            pass
+    return _curated_starter_vocab()
+
+def _curated_starter_vocab() -> list[str]:
+    """Curated list of coding-related words (used when common_coding_vocab.json is not present)."""
+    return [
     # Core Action Verbs
     "write", "create", "generate", "build", "make", "implement", "code", "develop", "fix", "debug", "correct", "solve",
     "improve", "optimize", "refactor", "rewrite", "convert", "translate", "add", "remove", "update", "modify",
@@ -103,10 +120,20 @@ starter_vocab = [
     "error", "boundary"
 ]
 
-# Deduplicate and clean
-starter_vocab = sorted(set(w.lower() for w in starter_vocab if len(w) > 1 and w.isalpha() or '-' in w or '_' in w))
+# Deduplicate and clean (keep words that are alphabetic, alphanumeric, or contain - _ +)
+def _keep_word(w: str) -> bool:
+    if len(w) < 1:
+        return False
+    w = w.lower()
+    if w.isalpha() or w.isalnum():
+        return True
+    if "-" in w or "_" in w or "+" in w:
+        return True
+    return False
 
-print(f"Starting with {len(starter_vocab)} unique words")
+starter_vocab = sorted(set(w.lower() for w in _load_starter_vocab() if _keep_word(w)))
+
+print(f"Starting with {len(starter_vocab)} unique words" + (f" (from {COMMON_VOCAB_FILE})" if os.path.exists(COMMON_VOCAB_FILE) else " (curated list)"))
 
 # ================== 2. NLTK / WordNet Setup ==================
 import nltk
@@ -141,44 +168,129 @@ def get_pos_and_def(word: str) -> tuple[str, str]:
     return "noun", f"a {word} is a term commonly used in software development, programming, or web technologies"
 
 # ================== 3. Build & Expand Dictionary ==================
-dictionary = {}
-all_words = set(starter_vocab)
-queue = deque(starter_vocab)
+def build_dictionary(
+    vocab: list[str],
+    max_iterations: int = 40,
+    verbose: bool = True,
+) -> dict[str, dict[str, str]]:
+    """
+    Build a dictionary of word -> {pos, def} using NLTK WordNet.
+    Expands recursively from definitions until no new words are found.
+    """
+    dictionary: dict[str, dict[str, str]] = {}
+    all_words = set(vocab)
+    queue = deque(vocab)
 
-print("Building dictionary...")
+    iteration = 0
+    while queue and iteration < max_iterations:
+        iteration += 1
+        current_batch = list(queue)
+        queue.clear()
+        added_this_round = 0
 
-iteration = 0
-max_iterations = 40  # safety limit
+        for word in current_batch:
+            if word in dictionary:
+                continue
 
-while queue and iteration < max_iterations:
-    iteration += 1
-    current_batch = list(queue)
-    queue.clear()
-    added_this_round = 0
+            pos, definition = get_pos_and_def(word)
+            dictionary[word] = {"pos": pos, "def": definition}
 
-    for word in current_batch:
-        if word in dictionary:
-            continue
+            tokens = re.findall(r"[a-z]+", definition.lower())
+            for token in tokens:
+                if token not in all_words and len(token) > 2:
+                    all_words.add(token)
+                    queue.append(token)
+                    added_this_round += 1
 
-        pos, definition = get_pos_and_def(word)
-        dictionary[word] = {"pos": pos, "def": definition}
+        if verbose:
+            print(f"Iter {iteration:2d} | New words added: {added_this_round:4d} | Total words: {len(all_words):6d}")
 
-        # Extract new words from this definition
-        tokens = re.findall(r"[a-z]+", definition.lower())
-        for token in tokens:
-            if token not in all_words and len(token) > 2:
-                all_words.add(token)
-                queue.append(token)
-                added_this_round += 1
+    return dictionary
 
-    print(f"Iter {iteration:2d} | New words added: {added_this_round:4d} | Total words: {len(all_words):6d}")
 
-print(f"\nDone. Final dictionary size: {len(dictionary):,} entries")
-print(f"Started with {len(starter_vocab):,} → added {len(dictionary) - len(starter_vocab):,} new words")
+def save_dictionary(dictionary: dict, path: str = "coding_dictionary.json") -> None:
+    """Save dictionary to JSON file."""
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(dictionary, f, indent=2, ensure_ascii=False)
 
-# ================== 4. Save to JSON ==================
-with open("coding_dictionary.json", "w", encoding="utf-8") as f:
-    json.dump(dictionary, f, indent=2, ensure_ascii=False)
 
-print("\nSaved to: coding_dictionary.json")
-print("You can now use this file in your dict_agent.py script.")
+def build_number_word_dictionary(word_dictionary: dict) -> dict[str, str]:
+    """
+    Build number->word mapping from all words in the coding dictionary:
+    - every main entry key (word)
+    - every pos value (noun, verb, adjective, etc.)
+    - every word token in each definition (def)
+    All collected words are deduplicated, sorted alphabetically (case-insensitive),
+    then numbered 1, 2, 3, ...
+    Returns a number-to-word dict (keys as strings for JSON: "1", "2", ...).
+    """
+    all_words: set[str] = set()
+    for word, entry in word_dictionary.items():
+        all_words.add(word)
+        all_words.add(entry["pos"].strip().lower())
+        # tokenize definition into words (letters only)
+        for token in re.findall(r"[a-z]+", entry["def"].lower()):
+            all_words.add(token)
+    sorted_words = sorted(all_words, key=str.lower)
+    return {str(i): w for i, w in enumerate(sorted_words, start=1)}
+
+
+def save_number_word_dictionary(
+    number_word_dictionary: dict, path: str = "number_word_dictionary.json"
+) -> None:
+    """Save number->word mapping to JSON file."""
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(number_word_dictionary, f, indent=2, ensure_ascii=False)
+
+
+def build_token_dictionary(
+    coding_dictionary: dict,
+    number_word_dictionary: dict,
+) -> dict[str, dict[str, list[str] | str]]:
+    """
+    Tokenize the full coding_dictionary using number_word_dictionary.
+    Word, pos, and def are all tokenized. Each entry is:
+    {word_token: {"pos": pos_token, "def": [def_tokens, ...]}}.
+    Words not in number_word_dictionary get token "0" (unknown).
+    """
+    # word -> number (string "1", "2", ...)
+    word_to_number = {w: num for num, w in number_word_dictionary.items()}
+    unknown = "0"
+
+    token_dictionary: dict[str, dict[str, list[str] | str]] = {}
+    for word, entry in coding_dictionary.items():
+        word_token = word_to_number.get(word.lower() if isinstance(word, str) else word, unknown)
+        pos_token = word_to_number.get(entry["pos"].strip().lower(), unknown)
+        def_tokens = [
+            word_to_number.get(tok, unknown)
+            for tok in re.findall(r"[a-z]+", entry["def"].lower())
+        ]
+        token_dictionary[word_token] = {"pos": pos_token, "def": def_tokens}
+    return token_dictionary
+
+
+def save_token_dictionary(
+    token_dictionary: dict, path: str = "token_dictionary.json"
+) -> None:
+    """Save tokenized dictionary to JSON file."""
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(token_dictionary, f, indent=2, ensure_ascii=False)
+
+
+# ================== 4. Run when executed as script ==================
+if __name__ == "__main__":
+    print("Building dictionary...")
+    dictionary = build_dictionary(starter_vocab, max_iterations=40, verbose=True)
+    print(f"\nDone. Final dictionary size: {len(dictionary):,} entries")
+    print(f"Started with {len(starter_vocab):,} -> added {len(dictionary) - len(starter_vocab):,} new words")
+    save_dictionary(dictionary)
+    print("Saved to: coding_dictionary.json")
+
+    number_word_dictionary = build_number_word_dictionary(dictionary)
+    save_number_word_dictionary(number_word_dictionary)
+    print("Saved to: number_word_dictionary.json")
+
+    token_dictionary = build_token_dictionary(dictionary, number_word_dictionary)
+    save_token_dictionary(token_dictionary)
+    print("Saved to: token_dictionary.json")
+    print("You can now use these files in your dict_agent.py script.")
